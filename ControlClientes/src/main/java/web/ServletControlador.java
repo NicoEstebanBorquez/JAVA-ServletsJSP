@@ -13,7 +13,22 @@ public class ServletControlador extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        this.accionDefault(request, response);
+        String accion = request.getParameter("accion");
+
+        if (accion != null) {
+            switch (accion) {
+                case "editar":
+                    this.editarCliente(request, response);
+                    break;
+                case "eliminar":
+                    this.eliminarCliente(request, response);
+                    break;
+                default:
+                    this.accionDefault(request, response);
+            }
+        } else {
+            this.accionDefault(request, response);
+        }
     }
 
     private void accionDefault(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -21,13 +36,10 @@ public class ServletControlador extends HttpServlet {
         System.out.println("Clientes: " + clientes);
 
         HttpSession sesion = request.getSession();
-
         //Listado de clientes:
         sesion.setAttribute("clientes", clientes);
-
         //Num. de clientes:
         sesion.setAttribute("totalClientes", clientes.size());
-
         //Saldo total:
         sesion.setAttribute("saldoTotal", calcularSaldoTotal(clientes));
 
@@ -45,8 +57,20 @@ public class ServletControlador extends HttpServlet {
         return saldoTotal;
     }
 
+    private void editarCliente(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        //Recuperamos el idCliente
+        int idCliente = Integer.parseInt(request.getParameter("idCliente"));
+        Cliente cliente = new ClienteDaoJDBC().encontrar(new Cliente(idCliente));
+        request.setAttribute("cliente", cliente);
+        String jspEditar = "/WEB-INF/paginas/cliente/editarCliente.jsp";
+        request.getRequestDispatcher(jspEditar).forward(request, response);
+    }
+
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
 
         String accion = request.getParameter("accion");
 
@@ -54,6 +78,9 @@ public class ServletControlador extends HttpServlet {
             switch (accion) {
                 case "insertar":
                     this.insertarCliente(request, response);
+                    break;
+                case "modificar":
+                    this.modificarCliente(request, response);
                     break;
                 default:
                     this.accionDefault(request, response);
@@ -82,6 +109,47 @@ public class ServletControlador extends HttpServlet {
         //Insertamos el cliente en la BD
         int registrosModificados = new ClienteDaoJDBC().insertar(cliente);
         System.out.println("Registros modificados: " + registrosModificados);
+
+        //Redirigimos a la accion por Default
+        this.accionDefault(request, response);
+    }
+    
+    private void modificarCliente(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+
+        //Recuperamos los valores del formulario de "Editar Cliente"
+        int idCliente = Integer.parseInt(request.getParameter("idCliente"));
+        String nombre = request.getParameter("nombre");
+        String apellido = request.getParameter("apellido");
+        String email = request.getParameter("email");
+        String telefono = request.getParameter("telefono");
+        double saldo = 0;
+        String saldoString = request.getParameter("saldo");
+        if (saldoString != null && !"".equals(saldoString)) {
+            saldo = Double.parseDouble(saldoString);
+        }
+
+        //Creamos el objeto Cliente (modelo)
+        Cliente cliente = new Cliente(idCliente, nombre, apellido, email, telefono, saldo);
+
+        //modificamos el cliente en la BD
+        int registrosModificados = new ClienteDaoJDBC().actualizar(cliente);
+        System.out.println("Registros modificados: " + registrosModificados);
+
+        //Redirigimos a la accion por Default
+        this.accionDefault(request, response);
+    }
+    
+    private void eliminarCliente(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+
+        //Recuperamos los valores del formulario de "Editar Cliente"
+        int idCliente = Integer.parseInt(request.getParameter("idCliente"));
+
+        //Creamos el objeto Cliente (modelo)
+        Cliente cliente = new Cliente(idCliente);
+
+        //Eliminamos el cliente en la BD
+        int registrosModificados = new ClienteDaoJDBC().eliminar(cliente);
+        System.out.println("Registros eliminados: " + registrosModificados);
 
         //Redirigimos a la accion por Default
         this.accionDefault(request, response);
